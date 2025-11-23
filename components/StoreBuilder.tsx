@@ -266,7 +266,7 @@ const StoreBuilder: React.FC = () => {
     setSelectedProduct(null);
   };
 
-  const isMobileSimulation = device === 'mobile' && !isPreviewOpen;
+  const isMobileView = device === 'mobile' || isPreviewOpen;
 
   // --- RENDERERS ---
 
@@ -329,13 +329,13 @@ const StoreBuilder: React.FC = () => {
               </button>
            </div>
            <div className="max-w-md mx-auto w-full mt-10">
-              <h3 className={`text-2xl font-bold mb-6 text-center ${selectedTheme.colors.text}`}>Search Products</h3>
+              <h3 className={`text-2xl font-bold mb-6 text-center ${selectedTheme.colors.text} ${selectedTheme.font}`}>Search Products</h3>
               <div className="relative">
                  <input 
                     type="text" 
                     placeholder="What are you looking for..." 
                     autoFocus
-                    className="w-full text-xl py-4 border-b-2 border-slate-300 focus:border-indigo-600 outline-none bg-transparent placeholder:text-slate-300"
+                    className={`w-full text-xl py-4 border-b-2 border-slate-300 focus:border-indigo-600 outline-none bg-transparent placeholder:text-slate-300 ${selectedTheme.font} ${selectedTheme.colors.text}`}
                  />
                  <Search className="absolute right-0 top-4 text-slate-400 w-6 h-6" />
               </div>
@@ -356,7 +356,7 @@ const StoreBuilder: React.FC = () => {
   );
 
   const RenderHeader = () => (
-    <div className={`px-4 py-4 flex items-center justify-between sticky top-0 z-20 shadow-sm transition-colors border-b border-black/5 ${selectedTheme.colors.card}`}>
+    <div className={`px-4 py-4 flex items-center justify-between shadow-sm transition-colors border-b border-black/5 ${selectedTheme.colors.card}`}>
       <div className="flex items-center gap-3">
         {currentView === 'product' ? (
           <button onClick={goHome} className={`p-2 -ml-2 hover:bg-black/5 rounded-full transition-colors ${selectedTheme.colors.text}`}>
@@ -387,14 +387,14 @@ const StoreBuilder: React.FC = () => {
 
   const RenderFOMO = () => (
     <div 
-      className={`fixed bottom-20 md:bottom-10 left-4 z-40 max-w-[250px] md:max-w-xs transition-all duration-500 transform ${fomoVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}
+      className={`absolute bottom-20 md:bottom-24 left-4 z-40 max-w-[250px] md:max-w-xs transition-all duration-500 transform ${fomoVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}
     >
       <div className={`${selectedTheme.colors.card} rounded-xl shadow-2xl p-3 flex items-center gap-3 border border-slate-100`}>
         <div className={`w-10 h-10 rounded-full ${selectedTheme.colors.primary} flex items-center justify-center`}>
           <Check className="w-5 h-5 text-white" />
         </div>
         <div>
-          <p className={`text-xs md:text-sm font-bold ${selectedTheme.colors.text}`}>
+          <p className={`text-xs md:text-sm font-bold ${selectedTheme.colors.text} ${selectedTheme.font}`}>
             {fomoData.name} from {fomoData.city}
           </p>
           <p className="text-[10px] md:text-xs text-slate-500 flex items-center gap-1">
@@ -405,8 +405,33 @@ const StoreBuilder: React.FC = () => {
     </div>
   );
 
+  const RenderStickyFooter = () => {
+    if (!selectedProduct) return null;
+    return (
+      <div className={`md:hidden bg-white border-t border-slate-200 p-3 z-50 shadow-[0_-5px_25px_rgba(0,0,0,0.15)] flex items-center gap-3 pb-safe`}>
+          <div className="flex items-center bg-slate-100 rounded-lg px-1 h-[60px] border border-slate-300 w-1/3">
+            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="flex-1 h-full flex items-center justify-center text-slate-800 active:bg-slate-200 rounded">
+              <Minus className="w-5 h-5 font-bold" />
+            </button>
+            <span className="w-8 text-center font-black text-slate-900 text-xl">{quantity}</span>
+            <button onClick={() => setQuantity(quantity + 1)} className="flex-1 h-full flex items-center justify-center text-slate-800 active:bg-slate-200 rounded">
+              <Plus className="w-5 h-5 font-bold" />
+            </button>
+          </div>
+          
+          <button 
+            onClick={addToCart}
+            className={`flex-1 ${selectedTheme.colors.primary} ${selectedTheme.colors.primaryText} h-[60px] ${selectedTheme.radius} font-black text-xl shadow-lg active:scale-95 transition-transform flex items-center justify-between px-4 ${selectedTheme.font}`}
+          >
+            <span>اضغط هنا للطلب</span>
+            <span className="bg-black/20 px-2 py-1 rounded text-sm">{selectedProduct.price * quantity} DH</span>
+          </button>
+      </div>
+    );
+  };
+
   const RenderStoreHome = () => (
-    <div className={`animate-fade-in min-h-full pb-20 ${selectedTheme.colors.bg}`}>
+    <div className={`animate-fade-in pb-12 ${selectedTheme.colors.bg}`}>
       {/* Hero */}
       <div className={`relative overflow-hidden h-64 md:h-96 group mb-6`}>
         <img 
@@ -425,7 +450,7 @@ const StoreBuilder: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid: 2 cols Mobile, 5 cols Desktop */}
+      {/* Grid: 2 cols Mobile/Preview, 5 cols Desktop */}
       <div className="px-3 md:px-8">
         <div className="flex items-center justify-between mb-6 px-1">
           <h3 className={`text-2xl font-bold ${selectedTheme.colors.text} ${selectedTheme.font}`}>
@@ -434,8 +459,8 @@ const StoreBuilder: React.FC = () => {
           <span className={`text-sm font-medium opacity-70 cursor-pointer underline ${selectedTheme.colors.text}`}>View All</span>
         </div>
         
-        {/* Dynamic Grid Column Logic */}
-        <div className={`grid gap-3 md:gap-6 ${isMobileSimulation ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-5'}`}>
+        {/* Forces 2 columns if in mobile mode OR in preview mode */}
+        <div className={`grid gap-3 md:gap-6 ${isMobileView ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-5'}`}>
           {products.map((product) => (
             <div 
               key={product.id} 
@@ -455,9 +480,9 @@ const StoreBuilder: React.FC = () => {
                   )}
               </div>
               <div className="p-3 flex flex-col flex-1">
-                <h4 className={`font-medium text-sm leading-snug mb-2 line-clamp-2 ${selectedTheme.colors.text}`}>{product.name}</h4>
+                <h4 className={`font-medium text-sm leading-snug mb-2 line-clamp-2 ${selectedTheme.colors.text} ${selectedTheme.font}`}>{product.name}</h4>
                 <div className="mt-auto flex items-center justify-between">
-                  <span className={`font-bold text-base ${selectedTheme.colors.price}`}>
+                  <span className={`font-bold text-base ${selectedTheme.colors.price} ${selectedTheme.font}`}>
                     {product.price} DH
                   </span>
                   <div className={`w-8 h-8 ${selectedTheme.radius} flex items-center justify-center ${selectedTheme.colors.primary} ${selectedTheme.colors.primaryText}`}>
@@ -472,7 +497,7 @@ const StoreBuilder: React.FC = () => {
       
       {/* Footer */}
       <div className={`mt-12 border-t border-black/5 py-10 px-6 text-center ${selectedTheme.colors.card}`}>
-        <h4 className={`text-xl font-bold mb-2 ${selectedTheme.colors.text}`}>{storeName}</h4>
+        <h4 className={`text-xl font-bold mb-2 ${selectedTheme.colors.text} ${selectedTheme.font}`}>{storeName}</h4>
         <div className="flex justify-center gap-6 mb-8 mt-4">
            <Facebook className="w-6 h-6 text-blue-600 cursor-pointer" />
            <Instagram className="w-6 h-6 text-pink-600 cursor-pointer" />
@@ -487,7 +512,7 @@ const StoreBuilder: React.FC = () => {
     const reviews = generateReviews(selectedTheme.niche);
     return (
       <div className="mt-12 px-4 md:px-0 max-w-2xl mx-auto">
-        <h3 className={`text-xl font-bold mb-6 flex items-center justify-center gap-2 ${selectedTheme.colors.text}`}>
+        <h3 className={`text-xl font-bold mb-6 flex items-center justify-center gap-2 ${selectedTheme.colors.text} ${selectedTheme.font}`}>
           <Sparkles className="w-5 h-5 text-yellow-500" />
           Customer Reviews ({reviews.length})
         </h3>
@@ -500,7 +525,7 @@ const StoreBuilder: React.FC = () => {
                      {rev.name.charAt(0)}
                    </div>
                    <div>
-                      <span className={`text-sm font-bold block ${selectedTheme.colors.text}`}>{rev.name}</span>
+                      <span className={`text-sm font-bold block ${selectedTheme.colors.text} ${selectedTheme.font}`}>{rev.name}</span>
                       <div className="flex text-yellow-400">
                           {[...Array(5)].map((_,i) => <Star key={i} className="w-3 h-3 fill-current" />)}
                       </div>
@@ -508,7 +533,7 @@ const StoreBuilder: React.FC = () => {
                  </div>
                  <span className="text-xs text-slate-400">{rev.date}</span>
                </div>
-               <p className={`text-sm opacity-80 italic mb-2 ${selectedTheme.colors.text}`}>"{rev.text}"</p>
+               <p className={`text-sm opacity-80 italic mb-2 ${selectedTheme.colors.text} ${selectedTheme.font}`}>"{rev.text}"</p>
                <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
                   <Check className="w-3 h-3" /> Verified Purchase
                </div>
@@ -523,7 +548,7 @@ const StoreBuilder: React.FC = () => {
     if (!selectedProduct) return null;
     
     return (
-      <div className={`animate-fade-in pb-20 min-h-full ${selectedTheme.colors.bg} ${selectedTheme.font}`}>
+      <div className={`animate-fade-in min-h-full ${selectedTheme.colors.bg} ${selectedTheme.font} pb-24`}>
         
         <div className="max-w-4xl mx-auto">
           
@@ -559,12 +584,12 @@ const StoreBuilder: React.FC = () => {
 
           {/* 2. Product Title & Price */}
           <div className={`px-6 text-center mb-6`}>
-            <h1 className={`text-2xl md:text-4xl font-extrabold leading-tight mb-3 ${selectedTheme.colors.text}`}>
+            <h1 className={`text-2xl md:text-4xl font-extrabold leading-tight mb-3 ${selectedTheme.colors.text} ${selectedTheme.font}`}>
               {selectedProduct.name}
             </h1>
             
             <div className="flex items-center justify-center gap-4 mb-4">
-               <span className={`text-4xl font-black ${selectedTheme.colors.price}`}>
+               <span className={`text-4xl font-black ${selectedTheme.colors.price} ${selectedTheme.font}`}>
                  {selectedProduct.price} MAD
                </span>
                <span className="text-lg text-slate-400 line-through decoration-red-500 decoration-2">
@@ -572,7 +597,7 @@ const StoreBuilder: React.FC = () => {
                </span>
             </div>
 
-            <p className={`text-sm md:text-base leading-relaxed opacity-80 ${selectedTheme.colors.text} max-w-xl mx-auto`}>
+            <p className={`text-sm md:text-base leading-relaxed opacity-80 ${selectedTheme.colors.text} ${selectedTheme.font} max-w-xl mx-auto`}>
               Premium quality design tailored for your needs. Authentic materials and verified durability.
               <span className="block mt-2 font-bold text-green-500 flex items-center justify-center gap-1">
                 <Check className="w-4 h-4" /> In Stock & Ready to Ship
@@ -587,56 +612,68 @@ const StoreBuilder: React.FC = () => {
             <div className={`absolute top-0 left-0 right-0 h-2 ${selectedTheme.colors.primary}`}></div>
             
             <div className="text-center mb-8 bg-slate-50 p-4 rounded-lg border border-slate-100">
-                 <h3 className="text-2xl font-black flex items-center justify-center gap-2 text-slate-900">
+                 <h3 className={`text-2xl font-black flex items-center justify-center gap-2 text-slate-900 ${selectedTheme.font}`}>
                     <Zap className="w-6 h-6 text-yellow-500 fill-current" />
                     للطلب املأ الاستمارة
                 </h3>
-                <p className="text-slate-500 font-bold text-sm mt-1">الدفع عند الاستلام - التوصيل مجاني</p>
+                <p className={`text-slate-500 font-bold text-sm mt-1 ${selectedTheme.font}`}>الدفع عند الاستلام - التوصيل مجاني</p>
             </div>
             
-            <div className="space-y-6 mb-8">
-              <div className={`flex flex-col ${isMobileSimulation ? 'gap-6' : 'sm:flex-row gap-4'}`}>
-                 <div className={`w-full ${isMobileSimulation ? '' : 'sm:w-1/2'}`}>
-                    <label className="block text-base font-black mb-2 mr-1 text-slate-800">الاسم الكامل</label>
+            <div className="mb-8">
+              {/* Layout: Stack on mobile, Side-by-side on desktop */}
+              <div className={isMobileView ? "space-y-4" : "grid grid-cols-2 gap-4"}>
+                 
+                 {/* Name Field */}
+                 <div className="relative">
+                    <label className={`block text-sm font-bold mb-2 text-slate-700 ${selectedTheme.font}`}>الاسم الكامل</label>
                     <div className="relative group">
-                        <User className="w-5 h-5 absolute top-4 right-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                        <div className="absolute top-3.5 right-3 text-slate-400 group-focus-within:text-indigo-600 transition-colors pointer-events-none">
+                            <User className="w-5 h-5" />
+                        </div>
                         <input 
                           type="text" 
-                          className={`w-full pr-12 pl-3 py-3.5 rounded-lg bg-white border-2 border-slate-200 outline-none focus:border-black focus:ring-0 text-right text-lg font-bold shadow-sm transition-all text-slate-900 placeholder:text-slate-300`} 
+                          className={`w-full pr-10 pl-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-black focus:ring-0 outline-none transition-all text-slate-900 font-bold text-right placeholder:text-slate-400 placeholder:font-normal ${selectedTheme.font}`} 
                           placeholder="الاسم هنا..." 
                         />
                     </div>
                  </div>
-                 <div className={`w-full ${isMobileSimulation ? '' : 'sm:w-1/2'}`}>
-                    <label className="block text-base font-black mb-2 mr-1 text-slate-800">رقم الهاتف</label>
+
+                 {/* Phone Field */}
+                 <div className="relative">
+                    <label className={`block text-sm font-bold mb-2 text-slate-700 ${selectedTheme.font}`}>رقم الهاتف</label>
                     <div className="relative group">
-                        <Phone className="w-5 h-5 absolute top-4 right-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                        <div className="absolute top-3.5 right-3 text-slate-400 group-focus-within:text-indigo-600 transition-colors pointer-events-none">
+                            <Phone className="w-5 h-5" />
+                        </div>
                         <input 
                           type="tel" 
-                          className={`w-full pr-12 pl-3 py-3.5 rounded-lg bg-white border-2 border-slate-200 outline-none focus:border-black focus:ring-0 text-right text-lg font-bold shadow-sm transition-all text-slate-900 placeholder:text-slate-300`} 
+                          className={`w-full pr-10 pl-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-black focus:ring-0 outline-none transition-all text-slate-900 font-bold text-right placeholder:text-slate-400 placeholder:font-normal ${selectedTheme.font}`} 
                           placeholder="06XXXXXXXX" 
                         />
                     </div>
                  </div>
-              </div>
-              
-              <div>
-                 <label className="block text-base font-black mb-2 mr-1 text-slate-800">العنوان و المدينة</label>
-                 <div className="relative group">
-                    <MapPin className="w-5 h-5 absolute top-4 right-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-                    <input 
-                      type="text" 
-                      className={`w-full pr-12 pl-3 py-3.5 rounded-lg bg-white border-2 border-slate-200 outline-none focus:border-black focus:ring-0 text-right text-lg font-bold shadow-sm transition-all text-slate-900 placeholder:text-slate-300`} 
-                      placeholder="مثال: الحي المحمدي، الدار البيضاء" 
-                    />
+
+                 {/* Address Field - Full Width */}
+                 <div className={isMobileView ? "" : "col-span-2"}>
+                    <label className={`block text-sm font-bold mb-2 text-slate-700 ${selectedTheme.font}`}>العنوان و المدينة</label>
+                    <div className="relative group">
+                        <div className="absolute top-3.5 right-3 text-slate-400 group-focus-within:text-indigo-600 transition-colors pointer-events-none">
+                            <MapPin className="w-5 h-5" />
+                        </div>
+                        <input 
+                          type="text" 
+                          className={`w-full pr-10 pl-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-black focus:ring-0 outline-none transition-all text-slate-900 font-bold text-right placeholder:text-slate-400 placeholder:font-normal ${selectedTheme.font}`} 
+                          placeholder="المدينة / العنوان..." 
+                        />
+                    </div>
                  </div>
               </div>
             </div>
 
-            {/* Desktop Action Bar Inside Form Card */}
-            <div className={`hidden md:flex flex-col gap-4 ${isMobileSimulation ? '!flex' : ''}`} dir="ltr">
+            {/* Action Bar Inside Form */}
+            <div className={`flex flex-col gap-4 mt-6`} dir="ltr">
                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="font-bold text-slate-800 text-lg">الكمية</span>
+                  <span className={`font-bold text-slate-800 text-lg ${selectedTheme.font}`}>الكمية</span>
                   <div className="flex items-center bg-white border-2 border-slate-300 rounded-lg h-12 shadow-sm">
                     <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-12 h-full hover:bg-slate-50 text-slate-900 rounded-l-lg flex items-center justify-center"><Minus className="w-5 h-5" /></button>
                     <span className="w-12 text-center font-black text-xl text-slate-900">{quantity}</span>
@@ -646,7 +683,7 @@ const StoreBuilder: React.FC = () => {
                
                <button 
                  onClick={addToCart}
-                 className={`w-full ${selectedTheme.colors.primary} ${selectedTheme.colors.primaryText} py-5 ${selectedTheme.radius} font-black text-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-4`}
+                 className={`w-full ${selectedTheme.colors.primary} ${selectedTheme.colors.primaryText} py-4 ${selectedTheme.radius} font-black text-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-4 ${selectedTheme.font}`}
                 >
                  <span>اضغط هنا للطلب</span>
                  <span className="bg-white/20 px-3 py-1 rounded text-lg">{selectedProduct.price * quantity} MAD</span>
@@ -658,7 +695,7 @@ const StoreBuilder: React.FC = () => {
           <RenderReviews />
 
           {/* Share Section */}
-          <div className="flex flex-col items-center justify-center gap-4 mb-20 mt-12">
+          <div className="flex flex-col items-center justify-center gap-4 mb-10 mt-12">
             <span className={`text-xs font-bold opacity-50 uppercase tracking-widest ${selectedTheme.colors.text}`}>Share with friends</span>
             <div className="flex gap-4">
               <button className="w-12 h-12 rounded-full bg-[#1877F2] text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
@@ -673,27 +710,6 @@ const StoreBuilder: React.FC = () => {
             </div>
           </div>
 
-          {/* Mobile Sticky Footer */}
-          <div className={`md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 z-50 shadow-[0_-5px_25px_rgba(0,0,0,0.15)] flex items-center gap-3 animate-slide-up pb-safe`}>
-              <div className="flex items-center bg-slate-100 rounded-lg px-1 h-[60px] border border-slate-300 w-1/3">
-                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="flex-1 h-full flex items-center justify-center text-slate-800 active:bg-slate-200 rounded">
-                  <Minus className="w-5 h-5 font-bold" />
-                </button>
-                <span className="w-8 text-center font-black text-slate-900 text-xl">{quantity}</span>
-                <button onClick={() => setQuantity(quantity + 1)} className="flex-1 h-full flex items-center justify-center text-slate-800 active:bg-slate-200 rounded">
-                  <Plus className="w-5 h-5 font-bold" />
-                </button>
-              </div>
-              
-              <button 
-                onClick={addToCart}
-                className={`flex-1 ${selectedTheme.colors.primary} ${selectedTheme.colors.primaryText} h-[60px] ${selectedTheme.radius} font-black text-xl shadow-lg active:scale-95 transition-transform flex items-center justify-between px-4`}
-              >
-                <span>اضغط هنا للطلب</span>
-                <span className="bg-black/20 px-2 py-1 rounded text-sm">{selectedProduct.price * quantity} DH</span>
-              </button>
-          </div>
-
         </div>
       </div>
     );
@@ -701,12 +717,28 @@ const StoreBuilder: React.FC = () => {
 
   const renderContent = () => {
     return (
-      <div className={`h-full overflow-y-auto ${selectedTheme.colors.bg} scroll-smooth custom-scrollbar relative`}>
-        <RenderHeader />
-        {currentView === 'home' ? <RenderStoreHome /> : <RenderProductPage />}
+      <div className={`h-full flex flex-col ${selectedTheme.colors.bg} relative overflow-hidden`}>
+        {/* Header - Fixed at top */}
+        <div className="flex-none z-20">
+           <RenderHeader />
+        </div>
+
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar relative">
+           {currentView === 'home' ? <RenderStoreHome /> : <RenderProductPage />}
+        </div>
+        
+        {/* Absolute Overlays */}
         <RenderFOMO />
         <RenderSearchOverlay />
         <RenderCartDrawer />
+
+        {/* Sticky Mobile Footer - Anchored to bottom of simulated screen */}
+        {currentView === 'product' && isMobileView && (
+           <div className="flex-none z-30">
+              <RenderStickyFooter />
+           </div>
+        )}
       </div>
     );
   };
