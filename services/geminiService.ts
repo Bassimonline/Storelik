@@ -171,6 +171,39 @@ export const analyzeProductImport = async (rawText: string) => {
 };
 
 /**
+ * Generates comprehensive store branding based on a niche.
+ */
+export const generateStoreBranding = async (niche: string) => {
+  try {
+    const prompt = `
+      You are an expert e-commerce brand consultant. 
+      Create a brand identity for a store in the "${niche}" niche targeting the Moroccan market.
+      
+      Return a JSON object with:
+      1. "storeName": A catchy, modern name (English or French).
+      2. "heroHeadline": A powerful 3-5 word headline for the homepage.
+      3. "heroSubtitle": A compelling 10-15 word subtitle.
+      4. "suggestedThemeId": Choose one from ['modern', 'cosmetic', 'fitness', 'gaming', 'health', 'car', 'animals'].
+      
+      Return ONLY the JSON.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json'
+      }
+    });
+
+    return JSON.parse(response.text || '{}');
+  } catch (error) {
+    console.error("Gemini Branding Error:", error);
+    throw error;
+  }
+};
+
+/**
  * Generates speech audio from text using Gemini TTS.
  */
 export const generateSpeech = async (text: string, voice: 'Puck' | 'Charon' | 'Kore' | 'Fenrir' | 'Zephyr' = 'Puck'): Promise<string | null> => {

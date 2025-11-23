@@ -1,12 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Palette, Layout, Smartphone, Monitor, Check, ShoppingCart, 
   Menu, Search, Eye, X, ChevronLeft, Minus, Plus, 
   MapPin, User, Phone, Share2, Facebook, Instagram, MessageCircle, Star,
   Dumbbell, Gamepad2, Heart, Sparkles, Car, Dog, Zap, Award, Bell,
-  Trash2, ArrowRight
+  Trash2, ArrowRight, Upload, Image as ImageIcon, Type, Settings,
+  Wand2, Loader2, RefreshCw
 } from 'lucide-react';
+import { generateStoreBranding } from '../services/geminiService';
 
 // --- Types & Data ---
 
@@ -77,7 +79,7 @@ const themes: Theme[] = [
       text: 'text-white',
       primary: 'bg-[#ccff00]',
       primaryText: 'text-black',
-      inputBg: 'bg-white', // Requested white inputs
+      inputBg: 'bg-white',
       inputBorder: 'border-slate-300',
       price: 'text-[#ccff00]'
     },
@@ -215,14 +217,24 @@ const fomoSales = [
 ];
 
 const StoreBuilder: React.FC = () => {
+  // Store Config State
   const [selectedTheme, setSelectedTheme] = useState<Theme>(themes[0]);
-  const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [storeName, setStoreName] = useState('My Awesome Store');
+  const [logo, setLogo] = useState<string | null>(null);
+  const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [heroHeadline, setHeroHeadline] = useState('Level Up Your Life');
+  const [heroSubtitle, setHeroSubtitle] = useState('Premium products delivered to your door in 24 hours.');
+  
+  // App State
+  const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'product'>('home');
+  const [activeTab, setActiveTab] = useState<'design' | 'content' | 'settings'>('design');
   const [selectedProduct, setSelectedProduct] = useState<typeof products[0] | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [nicheInput, setNicheInput] = useState('');
   
   // Cart & Search State
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -238,12 +250,8 @@ const StoreBuilder: React.FC = () => {
     const interval = setInterval(() => {
       setFomoVisible(true);
       setFomoData(fomoSales[Math.floor(Math.random() * fomoSales.length)]);
-      
-      setTimeout(() => {
-        setFomoVisible(false);
-      }, 4000); // Show for 4 seconds
-    }, 10000); // Trigger every 10 seconds
-
+      setTimeout(() => setFomoVisible(false), 4000);
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -264,6 +272,35 @@ const StoreBuilder: React.FC = () => {
   const goHome = () => {
     setCurrentView('home');
     setSelectedProduct(null);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'hero') => {
+    if (e.target.files && e.target.files[0]) {
+      const url = URL.createObjectURL(e.target.files[0]);
+      if (type === 'logo') setLogo(url);
+      if (type === 'hero') setHeroImage(url);
+    }
+  };
+
+  const handleMagicDesign = async () => {
+    if (!nicheInput) return;
+    setIsAiLoading(true);
+    try {
+      const branding = await generateStoreBranding(nicheInput);
+      setStoreName(branding.storeName);
+      setHeroHeadline(branding.heroHeadline);
+      setHeroSubtitle(branding.heroSubtitle);
+      
+      const matchedTheme = themes.find(t => t.id === branding.suggestedThemeId);
+      if (matchedTheme) setSelectedTheme(matchedTheme);
+      
+      // Reset hero image to random niche specific
+      setHeroImage(`https://picsum.photos/seed/${branding.storeName}/1200/600`);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const isMobileView = device === 'mobile' || isPreviewOpen;
@@ -319,42 +356,6 @@ const StoreBuilder: React.FC = () => {
     </>
   );
 
-  const RenderSearchOverlay = () => (
-    <>
-      {isSearchOpen && (
-        <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-md p-6 animate-fade-in flex flex-col">
-           <div className="flex justify-end mb-4">
-              <button onClick={() => setIsSearchOpen(false)} className="p-2 bg-slate-100 rounded-full">
-                 <X className="w-6 h-6 text-slate-600" />
-              </button>
-           </div>
-           <div className="max-w-md mx-auto w-full mt-10">
-              <h3 className={`text-2xl font-bold mb-6 text-center ${selectedTheme.colors.text} ${selectedTheme.font}`}>Search Products</h3>
-              <div className="relative">
-                 <input 
-                    type="text" 
-                    placeholder="What are you looking for..." 
-                    autoFocus
-                    className={`w-full text-xl py-4 border-b-2 border-slate-300 focus:border-indigo-600 outline-none bg-transparent placeholder:text-slate-300 ${selectedTheme.font} ${selectedTheme.colors.text}`}
-                 />
-                 <Search className="absolute right-0 top-4 text-slate-400 w-6 h-6" />
-              </div>
-              <div className="mt-8">
-                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Popular</p>
-                 <div className="flex flex-wrap gap-2">
-                    {['Summer', 'New', 'Best Seller', 'Discount'].map(tag => (
-                       <span key={tag} className="px-3 py-1 bg-slate-100 rounded-full text-sm text-slate-600 cursor-pointer hover:bg-slate-200">
-                          {tag}
-                       </span>
-                    ))}
-                 </div>
-              </div>
-           </div>
-        </div>
-      )}
-    </>
-  );
-
   const RenderHeader = () => (
     <div className={`px-4 py-4 flex items-center justify-between shadow-sm transition-colors border-b border-black/5 ${selectedTheme.colors.card}`}>
       <div className="flex items-center gap-3">
@@ -365,9 +366,14 @@ const StoreBuilder: React.FC = () => {
         ) : (
           <Menu className={`w-6 h-6 ${selectedTheme.colors.text}`} />
         )}
-        <span className={`text-xl font-bold ${selectedTheme.colors.text} ${selectedTheme.font}`}>
-          {storeName}
-        </span>
+        
+        {logo ? (
+          <img src={logo} alt="Logo" className="h-8 object-contain" />
+        ) : (
+          <span className={`text-xl font-bold ${selectedTheme.colors.text} ${selectedTheme.font}`}>
+            {storeName}
+          </span>
+        )}
       </div>
       <div className={`flex gap-4 ${selectedTheme.colors.text}`}>
         <button onClick={() => setIsSearchOpen(true)} className="hover:opacity-70">
@@ -381,26 +387,6 @@ const StoreBuilder: React.FC = () => {
              </span>
            )}
         </button>
-      </div>
-    </div>
-  );
-
-  const RenderFOMO = () => (
-    <div 
-      className={`absolute bottom-20 md:bottom-24 left-4 z-40 max-w-[250px] md:max-w-xs transition-all duration-500 transform ${fomoVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}
-    >
-      <div className={`${selectedTheme.colors.card} rounded-xl shadow-2xl p-3 flex items-center gap-3 border border-slate-100`}>
-        <div className={`w-10 h-10 rounded-full ${selectedTheme.colors.primary} flex items-center justify-center`}>
-          <Check className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <p className={`text-xs md:text-sm font-bold ${selectedTheme.colors.text} ${selectedTheme.font}`}>
-            {fomoData.name} from {fomoData.city}
-          </p>
-          <p className="text-[10px] md:text-xs text-slate-500 flex items-center gap-1">
-            Just bought <span className="font-bold">1 item</span> • {fomoData.time}
-          </p>
-        </div>
       </div>
     </div>
   );
@@ -435,15 +421,16 @@ const StoreBuilder: React.FC = () => {
       {/* Hero */}
       <div className={`relative overflow-hidden h-64 md:h-96 group mb-6`}>
         <img 
-          src={`https://picsum.photos/seed/${selectedTheme.id}/1200/600`} 
+          src={heroImage || `https://picsum.photos/seed/${selectedTheme.id}/1200/600`} 
           alt="Hero" 
           className="w-full h-full object-cover"
         />
         <div className={`absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center p-6 text-white`}>
           <span className="text-sm font-bold uppercase tracking-[0.2em] mb-2 opacity-90">{selectedTheme.niche} Deals</span>
-          <h2 className={`text-4xl md:text-6xl font-bold mb-6 drop-shadow-lg ${selectedTheme.font}`}>
-            Level Up Your Life
+          <h2 className={`text-3xl md:text-5xl font-bold mb-4 drop-shadow-lg ${selectedTheme.font}`}>
+            {heroHeadline}
           </h2>
+          <p className="max-w-md mx-auto mb-6 text-sm md:text-base opacity-90">{heroSubtitle}</p>
           <button className={`px-8 py-3 ${selectedTheme.colors.primary} ${selectedTheme.colors.primaryText} ${selectedTheme.radius} font-medium shadow-xl hover:scale-105 transition-transform text-sm md:text-base`}>
             Shop Now
           </button>
@@ -459,7 +446,6 @@ const StoreBuilder: React.FC = () => {
           <span className={`text-sm font-medium opacity-70 cursor-pointer underline ${selectedTheme.colors.text}`}>View All</span>
         </div>
         
-        {/* Forces 2 columns if in mobile mode OR in preview mode */}
         <div className={`grid gap-3 md:gap-6 ${isMobileView ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-5'}`}>
           {products.map((product) => (
             <div 
@@ -508,42 +494,6 @@ const StoreBuilder: React.FC = () => {
     </div>
   );
 
-  const RenderReviews = () => {
-    const reviews = generateReviews(selectedTheme.niche);
-    return (
-      <div className="mt-12 px-4 md:px-0 max-w-2xl mx-auto">
-        <h3 className={`text-xl font-bold mb-6 flex items-center justify-center gap-2 ${selectedTheme.colors.text} ${selectedTheme.font}`}>
-          <Sparkles className="w-5 h-5 text-yellow-500" />
-          Customer Reviews ({reviews.length})
-        </h3>
-        <div className="space-y-4">
-          {reviews.map((rev) => (
-            <div key={rev.id} className={`${selectedTheme.colors.card} p-5 ${selectedTheme.radius} border border-black/5 shadow-sm`}>
-               <div className="flex justify-between items-start mb-2">
-                 <div className="flex items-center gap-3">
-                   <div className={`w-10 h-10 rounded-full ${selectedTheme.colors.primary} flex items-center justify-center text-sm text-white font-bold`}>
-                     {rev.name.charAt(0)}
-                   </div>
-                   <div>
-                      <span className={`text-sm font-bold block ${selectedTheme.colors.text} ${selectedTheme.font}`}>{rev.name}</span>
-                      <div className="flex text-yellow-400">
-                          {[...Array(5)].map((_,i) => <Star key={i} className="w-3 h-3 fill-current" />)}
-                      </div>
-                   </div>
-                 </div>
-                 <span className="text-xs text-slate-400">{rev.date}</span>
-               </div>
-               <p className={`text-sm opacity-80 italic mb-2 ${selectedTheme.colors.text} ${selectedTheme.font}`}>"{rev.text}"</p>
-               <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                  <Check className="w-3 h-3" /> Verified Purchase
-               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   const RenderProductPage = () => {
     if (!selectedProduct) return null;
     
@@ -567,7 +517,7 @@ const StoreBuilder: React.FC = () => {
                </div>
              </div>
              
-             {/* Thumbnails Strip - Larger Images */}
+             {/* Thumbnails Strip */}
              <div className="flex gap-3 px-4 overflow-x-auto no-scrollbar justify-center mt-2">
                 {selectedProduct.thumbnails.map((thumb, idx) => (
                 <button 
@@ -605,10 +555,8 @@ const StoreBuilder: React.FC = () => {
             </p>
           </div>
 
-          {/* 3. BIG FORM Section - IMPROVED LAYOUT */}
+          {/* 3. BIG FORM Section */}
           <div className={`mx-4 md:mx-auto md:max-w-2xl bg-white ${selectedTheme.radius} p-6 md:p-8 shadow-2xl border-2 border-slate-100 mb-12 relative overflow-hidden`} dir="rtl">
-            
-            {/* Decorative Header for Form */}
             <div className={`absolute top-0 left-0 right-0 h-2 ${selectedTheme.colors.primary}`}></div>
             
             <div className="text-center mb-8 bg-slate-50 p-4 rounded-lg border border-slate-100">
@@ -620,10 +568,7 @@ const StoreBuilder: React.FC = () => {
             </div>
             
             <div className="mb-8">
-              {/* Layout: Stack on mobile, Side-by-side on desktop */}
               <div className={isMobileView ? "space-y-4" : "grid grid-cols-2 gap-4"}>
-                 
-                 {/* Name Field */}
                  <div className="relative">
                     <label className={`block text-sm font-bold mb-2 text-slate-700 ${selectedTheme.font}`}>الاسم الكامل</label>
                     <div className="relative group">
@@ -638,7 +583,6 @@ const StoreBuilder: React.FC = () => {
                     </div>
                  </div>
 
-                 {/* Phone Field */}
                  <div className="relative">
                     <label className={`block text-sm font-bold mb-2 text-slate-700 ${selectedTheme.font}`}>رقم الهاتف</label>
                     <div className="relative group">
@@ -653,7 +597,6 @@ const StoreBuilder: React.FC = () => {
                     </div>
                  </div>
 
-                 {/* Address Field - Full Width */}
                  <div className={isMobileView ? "" : "col-span-2"}>
                     <label className={`block text-sm font-bold mb-2 text-slate-700 ${selectedTheme.font}`}>العنوان و المدينة</label>
                     <div className="relative group">
@@ -670,7 +613,6 @@ const StoreBuilder: React.FC = () => {
               </div>
             </div>
 
-            {/* Action Bar Inside Form */}
             <div className={`flex flex-col gap-4 mt-6`} dir="ltr">
                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <span className={`font-bold text-slate-800 text-lg ${selectedTheme.font}`}>الكمية</span>
@@ -691,22 +633,43 @@ const StoreBuilder: React.FC = () => {
             </div>
           </div>
           
-          {/* AI Generated Reviews */}
-          <RenderReviews />
+          <div className="mt-12 px-4 md:px-0 max-w-2xl mx-auto">
+            <h3 className={`text-xl font-bold mb-6 flex items-center justify-center gap-2 ${selectedTheme.colors.text} ${selectedTheme.font}`}>
+              <Sparkles className="w-5 h-5 text-yellow-500" />
+              Customer Reviews (5)
+            </h3>
+            <div className="space-y-4">
+              {generateReviews(selectedTheme.niche).map((rev) => (
+                <div key={rev.id} className={`${selectedTheme.colors.card} p-5 ${selectedTheme.radius} border border-black/5 shadow-sm`}>
+                   <div className="flex justify-between items-start mb-2">
+                     <div className="flex items-center gap-3">
+                       <div className={`w-10 h-10 rounded-full ${selectedTheme.colors.primary} flex items-center justify-center text-sm text-white font-bold`}>
+                         {rev.name.charAt(0)}
+                       </div>
+                       <div>
+                          <span className={`text-sm font-bold block ${selectedTheme.colors.text} ${selectedTheme.font}`}>{rev.name}</span>
+                          <div className="flex text-yellow-400">
+                              {[...Array(5)].map((_,i) => <Star key={i} className="w-3 h-3 fill-current" />)}
+                          </div>
+                       </div>
+                     </div>
+                     <span className="text-xs text-slate-400">{rev.date}</span>
+                   </div>
+                   <p className={`text-sm opacity-80 italic mb-2 ${selectedTheme.colors.text} ${selectedTheme.font}`}>"{rev.text}"</p>
+                   <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+                      <Check className="w-3 h-3" /> Verified Purchase
+                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          {/* Share Section */}
           <div className="flex flex-col items-center justify-center gap-4 mb-10 mt-12">
             <span className={`text-xs font-bold opacity-50 uppercase tracking-widest ${selectedTheme.colors.text}`}>Share with friends</span>
             <div className="flex gap-4">
-              <button className="w-12 h-12 rounded-full bg-[#1877F2] text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                <Facebook className="w-6 h-6" />
-              </button>
-              <button className="w-12 h-12 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                <MessageCircle className="w-6 h-6" />
-              </button>
-              <button className="w-12 h-12 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                <Instagram className="w-6 h-6" />
-              </button>
+              <button className="w-12 h-12 rounded-full bg-[#1877F2] text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><Facebook className="w-6 h-6" /></button>
+              <button className="w-12 h-12 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><MessageCircle className="w-6 h-6" /></button>
+              <button className="w-12 h-12 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><Instagram className="w-6 h-6" /></button>
             </div>
           </div>
 
@@ -715,33 +678,52 @@ const StoreBuilder: React.FC = () => {
     );
   };
 
-  const renderContent = () => {
-    return (
-      <div className={`h-full flex flex-col ${selectedTheme.colors.bg} relative overflow-hidden`}>
-        {/* Header - Fixed at top */}
-        <div className="flex-none z-20">
-           <RenderHeader />
-        </div>
-
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar relative">
-           {currentView === 'home' ? <RenderStoreHome /> : <RenderProductPage />}
-        </div>
-        
-        {/* Absolute Overlays */}
-        <RenderFOMO />
-        <RenderSearchOverlay />
-        <RenderCartDrawer />
-
-        {/* Sticky Mobile Footer - Anchored to bottom of simulated screen */}
-        {currentView === 'product' && isMobileView && (
-           <div className="flex-none z-30">
-              <RenderStickyFooter />
-           </div>
-        )}
+  const renderContent = () => (
+    <div className={`h-full flex flex-col ${selectedTheme.colors.bg} relative overflow-hidden`}>
+      <div className="flex-none z-20"><RenderHeader /></div>
+      <div className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar relative">
+         {currentView === 'home' ? <RenderStoreHome /> : <RenderProductPage />}
       </div>
-    );
-  };
+      
+      {/* Absolute Overlays */}
+      <div 
+        className={`absolute bottom-20 md:bottom-24 left-4 z-40 max-w-[250px] md:max-w-xs transition-all duration-500 transform ${fomoVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}
+      >
+        <div className={`${selectedTheme.colors.card} rounded-xl shadow-2xl p-3 flex items-center gap-3 border border-slate-100`}>
+          <div className={`w-10 h-10 rounded-full ${selectedTheme.colors.primary} flex items-center justify-center`}>
+            <Check className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className={`text-xs md:text-sm font-bold ${selectedTheme.colors.text} ${selectedTheme.font}`}>
+              {fomoData.name} from {fomoData.city}
+            </p>
+            <p className="text-[10px] md:text-xs text-slate-500 flex items-center gap-1">
+              Just bought <span className="font-bold">1 item</span> • {fomoData.time}
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <RenderSearchOverlay />
+      <RenderCartDrawer />
+      {currentView === 'product' && isMobileView && <div className="flex-none z-30"><RenderStickyFooter /></div>}
+    </div>
+  );
+
+  const RenderSearchOverlay = () => (
+    isSearchOpen && (
+      <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-md p-6 animate-fade-in flex flex-col">
+         <div className="flex justify-end mb-4"><button onClick={() => setIsSearchOpen(false)} className="p-2 bg-slate-100 rounded-full"><X className="w-6 h-6 text-slate-600" /></button></div>
+         <div className="max-w-md mx-auto w-full mt-10">
+            <h3 className={`text-2xl font-bold mb-6 text-center ${selectedTheme.colors.text} ${selectedTheme.font}`}>Search Products</h3>
+            <div className="relative">
+               <input type="text" placeholder="What are you looking for..." autoFocus className={`w-full text-xl py-4 border-b-2 border-slate-300 focus:border-indigo-600 outline-none bg-transparent ${selectedTheme.font} ${selectedTheme.colors.text}`} />
+               <Search className="absolute right-0 top-4 text-slate-400 w-6 h-6" />
+            </div>
+         </div>
+      </div>
+    )
+  );
 
   if (isPreviewOpen) {
     return (
@@ -751,10 +733,7 @@ const StoreBuilder: React.FC = () => {
               <Eye className="w-5 h-5 text-emerald-400" />
               <span className="font-bold">Live Preview Mode</span>
            </div>
-           <button 
-             onClick={() => setIsPreviewOpen(false)}
-             className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-           >
+           <button onClick={() => setIsPreviewOpen(false)} className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
              <X className="w-4 h-4" /> Close Preview
            </button>
         </div>
@@ -770,109 +749,186 @@ const StoreBuilder: React.FC = () => {
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-140px)] animate-fade-in gap-6">
       
-      {/* Editor Panel */}
-      <div className="w-full lg:w-80 flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex-shrink-0">
-        <div className="p-5 border-b border-slate-100">
-          <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-            <Layout className="w-5 h-5 text-indigo-600" />
-            Store Editor
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">Customize for your specific niche.</p>
+      {/* NEW SIDEBAR EDITOR */}
+      <div className="w-full lg:w-96 flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex-shrink-0">
+        
+        {/* AI Magic Header */}
+        <div className="p-5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white">
+           <h2 className="font-bold text-lg flex items-center gap-2 mb-2">
+              <Wand2 className="w-5 h-5 text-yellow-300" /> Magic Designer
+           </h2>
+           <p className="text-xs text-white/80 mb-3">Describe your niche and let AI build your dream store.</p>
+           <div className="flex gap-2">
+              <input 
+                 value={nicheInput}
+                 onChange={(e) => setNicheInput(e.target.value)}
+                 className="flex-1 bg-white/20 border border-white/30 rounded-lg px-3 py-2 text-sm text-white placeholder:text-white/60 outline-none focus:bg-white/30 transition-colors"
+                 placeholder="e.g. Luxury Watches, Baby Clothes..."
+              />
+              <button 
+                onClick={handleMagicDesign}
+                disabled={isAiLoading || !nicheInput}
+                className="bg-white text-indigo-600 px-3 py-2 rounded-lg font-bold text-xs hover:bg-indigo-50 transition-colors disabled:opacity-50"
+              >
+                {isAiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Generate'}
+              </button>
+           </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-200">
+           {['design', 'content', 'settings'].map(tab => (
+              <button 
+                key={tab}
+                onClick={() => setActiveTab(tab as any)}
+                className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider ${activeTab === tab ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50' : 'text-slate-500 hover:bg-slate-50'}`}
+              >
+                {tab}
+              </button>
+           ))}
         </div>
         
-        <div className="p-5 flex-1 overflow-y-auto space-y-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
           
-          {/* Store Name */}
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Store Name</label>
-            <input 
-              type="text" 
-              value={storeName}
-              onChange={(e) => setStoreName(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-            />
-          </div>
-
-          {/* Theme Selection */}
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-              <Palette className="w-4 h-4" />
-              Select Niche Theme
-            </label>
-            <div className="space-y-3">
-              {themes.map(theme => (
-                <div 
-                  key={theme.id}
-                  onClick={() => setSelectedTheme(theme)}
-                  className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${selectedTheme.id === theme.id ? 'border-indigo-600 bg-indigo-50 shadow-md' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'}`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                        {theme.id === 'fitness' && <Dumbbell className="w-3 h-3" />}
-                        {theme.id === 'cosmetic' && <Sparkles className="w-3 h-3" />}
-                        {theme.id === 'gaming' && <Gamepad2 className="w-3 h-3" />}
-                        {theme.id === 'health' && <Heart className="w-3 h-3" />}
-                        {theme.id === 'car' && <Car className="w-3 h-3" />}
-                        {theme.id === 'animals' && <Dog className="w-3 h-3" />}
-                        {theme.name}
-                    </span>
-                    {selectedTheme.id === theme.id && <Check className="w-4 h-4 text-indigo-600" />}
+          {activeTab === 'design' && (
+            <div className="space-y-4">
+               <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase mb-3 block">Theme Selection</label>
+                  <div className="space-y-3">
+                    {themes.map(theme => (
+                      <div 
+                        key={theme.id}
+                        onClick={() => setSelectedTheme(theme)}
+                        className={`cursor-pointer p-3 rounded-xl border-2 transition-all group ${selectedTheme.id === theme.id ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100 hover:border-slate-300'}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-slate-900">{theme.name}</span>
+                          {selectedTheme.id === theme.id && <Check className="w-4 h-4 text-indigo-600" />}
+                        </div>
+                        
+                        <div className="flex gap-1 mt-2">
+                          <div className={`w-4 h-4 rounded-full border border-slate-200 ${theme.colors.bg}`}></div>
+                          <div className={`w-4 h-4 rounded-full border border-slate-200 ${theme.colors.primary}`}></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-xs text-slate-500 leading-tight">{theme.description}</p>
-                  
-                  {/* Color Preview Swatches */}
-                  <div className="flex gap-1 mt-2">
-                    <div className={`w-4 h-4 rounded-full border border-slate-100 ${theme.colors.bg}`}></div>
-                    <div className={`w-4 h-4 rounded-full border border-slate-100 ${theme.colors.primary}`}></div>
-                    <div className={`w-4 h-4 rounded-full border border-slate-100 ${theme.colors.card}`}></div>
-                  </div>
-                </div>
-              ))}
+               </div>
             </div>
-          </div>
+          )}
+
+          {activeTab === 'content' && (
+            <div className="space-y-6">
+               
+               {/* Identity Section */}
+               <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-slate-800 border-b pb-2 flex items-center gap-2">
+                     <ImageIcon className="w-4 h-4" /> Identity & Logo
+                  </h3>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-2">Store Name</label>
+                    <input 
+                      type="text" 
+                      value={storeName} 
+                      onChange={(e) => setStoreName(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-600 outline-none" 
+                    />
+                  </div>
+
+                  <div>
+                     <label className="block text-xs font-bold text-slate-500 mb-2">Logo Upload</label>
+                     <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors relative">
+                        <input type="file" onChange={(e) => handleFileUpload(e, 'logo')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" />
+                        {logo ? (
+                           <div className="relative">
+                              <img src={logo} className="h-10 mx-auto object-contain" alt="Logo" />
+                              <button onClick={(e) => { e.preventDefault(); setLogo(null); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full"><X className="w-3 h-3" /></button>
+                           </div>
+                        ) : (
+                           <div className="text-slate-400">
+                              <Upload className="w-6 h-6 mx-auto mb-1" />
+                              <span className="text-xs">Click to upload logo</span>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+               </div>
+
+               {/* Hero Section */}
+               <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-slate-800 border-b pb-2 flex items-center gap-2">
+                     <Type className="w-4 h-4" /> Hero Banner
+                  </h3>
+
+                  <div>
+                     <label className="block text-xs font-bold text-slate-500 mb-2">Banner Image</label>
+                     <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:bg-slate-50 transition-colors relative">
+                        <input type="file" onChange={(e) => handleFileUpload(e, 'hero')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" />
+                        {heroImage ? (
+                           <div className="relative h-24 rounded-lg overflow-hidden">
+                              <img src={heroImage} className="w-full h-full object-cover" alt="Hero" />
+                           </div>
+                        ) : (
+                           <div className="text-slate-400">
+                              <ImageIcon className="w-6 h-6 mx-auto mb-1" />
+                              <span className="text-xs">Click to upload banner</span>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-2">Main Headline</label>
+                    <textarea 
+                      value={heroHeadline} 
+                      onChange={(e) => setHeroHeadline(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-600 outline-none h-16 resize-none" 
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-2">Subtitle</label>
+                    <textarea 
+                      value={heroSubtitle} 
+                      onChange={(e) => setHeroSubtitle(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-600 outline-none h-16 resize-none" 
+                    />
+                  </div>
+               </div>
+
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+             <div className="text-center py-10 text-slate-400">
+                <Settings className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                <p className="text-sm">Advanced settings for domain, pixels, and payment gateways would appear here.</p>
+             </div>
+          )}
+
         </div>
 
-        <div className="p-5 border-t border-slate-100 bg-slate-50 space-y-3">
+        <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-2">
           <button 
             onClick={() => setIsPreviewOpen(true)}
             className="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-200"
           >
-            <Eye className="w-4 h-4" /> Open Live Preview
+            <Eye className="w-4 h-4" /> Full Screen Preview
           </button>
         </div>
       </div>
 
-      {/* Editor Preview Area */}
+      {/* Main Preview Area */}
       <div className="flex-1 bg-slate-200/50 rounded-2xl border border-slate-200 p-4 md:p-8 flex items-center justify-center relative overflow-hidden backdrop-blur-sm">
-        
-        {/* Device Toggle */}
         <div className="absolute top-4 right-4 bg-white p-1 rounded-lg shadow-sm border border-slate-200 hidden lg:flex z-10">
-          <button 
-            onClick={() => setDevice('desktop')}
-            className={`p-2 rounded-md transition-colors ${device === 'desktop' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-            title="Desktop View"
-          >
-            <Monitor className="w-5 h-5" />
-          </button>
+          <button onClick={() => setDevice('desktop')} className={`p-2 rounded-md ${device === 'desktop' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Monitor className="w-5 h-5" /></button>
           <div className="w-px bg-slate-200 mx-1 my-1"></div>
-          <button 
-            onClick={() => setDevice('mobile')}
-            className={`p-2 rounded-md transition-colors ${device === 'mobile' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-            title="Mobile View"
-          >
-            <Smartphone className="w-5 h-5" />
-          </button>
+          <button onClick={() => setDevice('mobile')} className={`p-2 rounded-md ${device === 'mobile' ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><Smartphone className="w-5 h-5" /></button>
         </div>
 
-        {/* Device Frame */}
-        <div className={`
-          bg-white relative transition-all duration-500 mx-auto overflow-hidden shadow-2xl border-slate-900
-          ${device === 'mobile' 
-            ? 'w-[375px] h-[650px] rounded-[3rem] border-[8px]' 
-            : 'w-full h-full max-w-5xl rounded-lg border border-slate-200'}
-        `}>
+        <div className={`bg-white relative transition-all duration-500 mx-auto overflow-hidden shadow-2xl border-slate-900 ${device === 'mobile' ? 'w-[375px] h-[650px] rounded-[3rem] border-[8px]' : 'w-full h-full max-w-5xl rounded-lg border border-slate-200'}`}>
           {device === 'mobile' && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 rounded-b-xl z-20"></div>}
-          
           <div className="h-full w-full overflow-hidden">
              {renderContent()}
           </div>
